@@ -1,7 +1,7 @@
-from asyncio.log import logger
+
 
 from aiocqhttp import MessageSegment
-
+from astrbot.api import logger # 使用 astrbot 提供的 logger 接口
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,

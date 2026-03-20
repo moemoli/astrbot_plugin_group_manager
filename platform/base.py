@@ -1,7 +1,6 @@
 # 平台适配基础类
 
-from asyncio.log import logger
-
+from astrbot.api import logger # 使用 astrbot 提供的 logger 接口
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from data.plugins.astrbot_plugin_group_manager.utils import fetch_url
 
@@ -33,7 +32,7 @@ class PlatformBase:
         headers = {}
         if github_token == "":
             headers = {"Authorization": f"token {github_token}"}
-
+        logger.info(f"Fetching latest commit hash for GitHub repo {github_repo} with headers: {headers}")
         github_api = f"https://api.github.com/repos/{github_repo}/commits?per_page=1"
         result = fetch_url(github_api, headers=headers)
         if isinstance(result, dict):
