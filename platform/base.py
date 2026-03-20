@@ -69,11 +69,15 @@ class PlatformBase:
         self, comment: str, group_id: str, level: int, user_id: str
     ):
         # 全局黑名单检测
-        for black in await self.get_global_blacklist(group_id):
+        global_blacklist = await self.get_global_blacklist(group_id)
+        logger.info(f"Checking global blacklist for user {user_id} in group {group_id}: {global_blacklist}")
+        for black in global_blacklist:
             if black.startswith(f"{user_id}"):
                 return False, "用户在全局黑名单中"
         # 群黑名单检测
-        for black in await self.get_group_blacklist(group_id):
+        group_blacklist = await self.get_group_blacklist(group_id)
+        logger.info(f"Checking group blacklist for user {user_id} in group {group_id}: {group_blacklist}")
+        for black in group_blacklist:
             if black.startswith(f"{user_id}"):
                 return False, "用户在黑名单中"
         # GitHub 入群检测
@@ -89,7 +93,9 @@ class PlatformBase:
                 logger.info(f"GitHub join check failed for user {user_id} in group {group_id}: lastest_hash={lastest_hash}, comment={comment}, level={level}, required_level={self.get_join_level(group_id)}")
                 return False, "错误的 GitHub 提交哈希，或者入群等级不足"
         # 黑名单备注检测
-        for black in await self.get_join_comment_blacklist(group_id):
+        comment_blacklist = await self.get_join_comment_blacklist(group_id)
+        logger.info(f"Checking comment blacklist for user {user_id} in group {group_id}: {comment_blacklist}")
+        for black in comment_blacklist:
             if black in comment:
                 return False, "备注内容在黑名单中"
         if level < await self.get_join_level(group_id):
