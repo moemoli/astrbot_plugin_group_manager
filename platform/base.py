@@ -96,7 +96,7 @@ class PlatformBase:
         comment_blacklist = await self.get_join_comment_blacklist(group_id)
         logger.info(f"Checking comment blacklist for user {user_id} in group {group_id}: {comment_blacklist}")
         for black in comment_blacklist:
-            if black in comment:
+            if black != None and len(black) > 0 and black in comment:
                 return False, "备注内容在黑名单中"
         if level < await self.get_join_level(group_id):
             return False, "入群等级不足"
