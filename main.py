@@ -35,6 +35,7 @@ class GMPlugin(Star):
         can_admin  = await self.get_kv_data(f"{group_id}_can_admin", False) or False
         # 获取astrbot管理员列表
         admin_list = self.astr_config.get("admin_list", [])
+        logger.info(f"Checking permissions for user {user_id} in group {group_id}: is_admin={is_admin}, can_admin={can_admin}, admin_list={admin_list}")
         return user_id in admin_list or (is_admin and can_admin)
 
     # gm指令组
