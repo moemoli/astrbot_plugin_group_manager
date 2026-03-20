@@ -40,7 +40,7 @@ class PlatformBase:
     def get_join_comment_blacklist(self, group_id: str) -> list[str]:
         """获取入群申请评论黑名单列表"""
         return str(
-            self.plugin.get_kv_data(f"{group_id}_join_comment_black") or ""
+            self.plugin.get_kv_data(f"{group_id}_join_comment_black", "") or ""
         ).split(",")
         
     def get_join_level(self, group_id: str) -> int:
@@ -54,13 +54,13 @@ class PlatformBase:
     def get_group_blacklist(self, group_id: str) -> list[str]:
         """获取群黑名单列表"""
         return str(
-            self.plugin.get_kv_data(f"{group_id}_blacklist") or ""
+            self.plugin.get_kv_data(f"{group_id}_blacklist", "") or ""
         ).split(",")
         
     def get_global_blacklist(self, group_id: str) -> list[str]:
         """获取全局黑名单列表"""
         return str(
-            self.plugin.get_kv_data(f"global_blacklist") or ""
+            self.plugin.get_kv_data(f"global_blacklist", "") or ""
         ).split(",")
         
     async def can_approve(
