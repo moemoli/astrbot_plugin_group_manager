@@ -48,7 +48,7 @@ class PlatformOneBot(PlatformBase):
                                 ),
                             )
                         else:
-                            if self.can_reject(group_id):
+                            if await self.can_reject(group_id):
                                 await event.bot.set_group_add_request(
                                     flag=flag, sub_type=sub_type, approve=False
                                 )
