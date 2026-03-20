@@ -27,7 +27,7 @@ class PlatformOneBot(PlatformBase):
                         flag = str(raw.get("flag") or "")
                         sub_type = str(raw.get("sub_type") or "")
                         comment = str(raw.get("comment") or "")
-                        comment = comment[comment.find("\n"):]  # 截断备注内容，防止过长
+                        comment = comment[comment.find("答案："):]  # 截断备注内容，防止过长
                         info = await event.bot.get_stranger_info(user_id=int(user_id))
                         level = info["qqLevel"] or 0
                         can_approve, reason = await self.can_approve(
