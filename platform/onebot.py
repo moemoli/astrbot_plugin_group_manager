@@ -1,3 +1,5 @@
+from asyncio.log import logger
+
 from aiocqhttp import MessageSegment
 
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
@@ -20,10 +22,12 @@ class PlatformOneBot(PlatformBase):
                     return
                 if isinstance(event, AiocqhttpMessageEvent):
                     if self.is_join_enable(group_id):
+                        logger.info(f"Received join request for group {group_id}: {raw}")
                         user_id = str(raw.get("user_id") or "")
                         flag = str(raw.get("flag") or "")
                         sub_type = str(raw.get("sub_type") or "")
-                        comment = str(raw.get("comment") or "").replace("答案：", "")
+                        comment = str(raw.get("comment") or "")
+                        comment = comment[comment.find("\n"):]  # 截断备注内容，防止过长
                         info = await event.bot.get_stranger_info(user_id=int(user_id))
                         level = info["qqLevel"] or 0
                         can_approve, reason = await self.can_approve(
@@ -32,6 +36,7 @@ class PlatformOneBot(PlatformBase):
                             level=level,
                             user_id=user_id,
                         )
+                        logger.info(f"Approval result for user {user_id} in group {group_id}: can_approve={can_approve}, reason={reason}, comment={comment}")
                         if can_approve:
                             await event.bot.set_group_add_request(
                                 flag=flag, sub_type=sub_type, approve=True
