@@ -9,7 +9,7 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 from astrbot.core.star.filter.command import GreedyStr
-from platform.onebot import PlatformOneBot
+from .platform.onebot import PlatformOneBot
 
 
 class GMPlugin(Star):
