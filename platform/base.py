@@ -48,11 +48,11 @@ class PlatformBase:
         
     def get_join_level(self, group_id: str) -> int:
         """获取入群批准难度等级"""
-        return int(self.plugin.get_kv_data(f"{group_id}_join_level", 0) or 0)
+        return self.plugin.get_kv_data(f"{group_id}_join_level", 0) or 0
     
     def can_reject(self, group_id: str) -> bool:
         """获取是否自动拒绝"""
-        return bool(self.plugin.get_kv_data(f"{group_id}_join_reject", False) or False)
+        return self.plugin.get_kv_data(f"{group_id}_join_reject", False) or False
     
     def get_group_blacklist(self, group_id: str) -> list[str]:
         """获取群黑名单列表"""
