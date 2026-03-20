@@ -277,8 +277,6 @@ class GMPlugin(Star):
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def handle_join_request(self, event: AstrMessageEvent):
         """处理入群请求事件"""
-        if event.get_message_type() != MessageType.OTHER_MESSAGE:
-            return
         if isinstance(event, AiocqhttpMessageEvent):
             await self.platform_onebot.handle_join_request(event)
         else:
