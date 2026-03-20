@@ -1,5 +1,7 @@
 # 平台适配基础类
 
+from asyncio.log import logger
+
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from data.plugins.astrbot_plugin_group_manager.utils import fetch_url
 
@@ -28,7 +30,8 @@ class PlatformBase:
             .replace("https://github.com/", "")
             .replace(".git", "")
         )
-        if not github_token.is_none_or_empty():
+        headers = {}
+        if github_token == "":
             headers = {"Authorization": f"token {github_token}"}
 
         github_api = f"https://api.github.com/repos/{github_repo}/commits?per_page=1"
@@ -76,6 +79,7 @@ class PlatformBase:
                 return False, "用户在黑名单中"
         # GitHub 入群检测
         if self.is_github_enable(group_id):
+            logger.info(f"GitHub join check enabled for group {group_id}, checking comment: {comment}")
             lastest_hash = self.get_github_repo_lastest_hash(group_id)
             if (
                not (lastest_hash is not None
@@ -83,6 +87,7 @@ class PlatformBase:
                 and lastest_hash.startswith(comment)
                 and level >= self.get_join_level(group_id))
             ):
+                logger.info(f"GitHub join check failed for user {user_id} in group {group_id}: lastest_hash={lastest_hash}, comment={comment}, level={level}, required_level={self.get_join_level(group_id)}")
                 return False, "错误的 GitHub 提交哈希，或者入群等级不足"
         # 黑名单备注检测
         for black in self.get_join_comment_blacklist(group_id):
