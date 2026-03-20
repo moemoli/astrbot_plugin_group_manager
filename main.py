@@ -79,7 +79,7 @@ class GMPlugin(Star):
     # 群黑名单配置指令 - 删除黑名单
     # 用法: /gm delblack @用户/用户id
     @gm.command("delblack", aliases=["删黑","移出黑名单","删除黑名单"])
-    async def gm_delblack(self, event: AstrMessageEvent,userid:str| None):
+    async def gm_delblack(self, event: AstrMessageEvent, userid:str| None):
         """群黑名单配置指令
         Args:
             userid(str): 用户id或@用户
@@ -89,7 +89,8 @@ class GMPlugin(Star):
             return
         
         user_id = None
-        if isinstance(userid, int):
+        logger.info(f"Parsing user_id for delblack command: userid={userid}")
+        if userid != None and len(userid) > 0 and isinstance(userid, int):
             user_id = str(userid)
         else:
             for msg in event.message_obj.message:
