@@ -1,0 +1,7 @@
+{
+  "github_token": {
+    "description": "GitHub Token",
+    "hint": "用于避免GitHub API请求频繁的问题",
+    "type": "string"
+  }
+}
