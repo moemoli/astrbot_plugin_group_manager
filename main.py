@@ -281,7 +281,7 @@ class GMPlugin(Star):
         if isinstance(event, AiocqhttpMessageEvent):
             await self.platform_onebot.handle_join_request(event)
         else:
-            logger.warning(f"收到不支持的平台的入群特殊事件: {event.platform.name}")
+            return
     
     ################################################################
     # 全局配置指令组
