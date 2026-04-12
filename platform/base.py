@@ -65,6 +65,9 @@ class PlatformBase:
             await self.plugin.get_kv_data(f"global_blacklist", "") or ""
         ).split(",")
         
+    async def is_astr_admin(self, user_id: str) -> bool:
+        admin_list = self.plugin.astr_config.get("admins_id", [])
+        return user_id in admin_list
     async def can_approve(
         self, comment: str, group_id: str, level: int, user_id: str
     ):
