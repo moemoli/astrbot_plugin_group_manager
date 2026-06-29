@@ -1,6 +1,6 @@
 # 平台适配基础类
 
-from astrbot.api import logger # 使用 astrbot 提供的 logger 接口
+from astrbot.api import logger  # 使用 astrbot 提供的 logger 接口
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from data.plugins.astrbot_plugin_group_manager.utils import fetch_url
 
@@ -32,7 +32,9 @@ class PlatformBase:
         headers = {}
         if github_token == "":
             headers = {"Authorization": f"token {github_token}"}
-        logger.info(f"Fetching latest commit hash for GitHub repo {github_repo} with headers: {headers}")
+        logger.info(
+            f"Fetching latest commit hash for GitHub repo {github_repo} with headers: {headers}"
+        )
         github_api = f"https://api.github.com/repos/{github_repo}/commits?per_page=1"
         result = await fetch_url(github_api, headers=headers)
         if isinstance(result, dict):
@@ -44,63 +46,85 @@ class PlatformBase:
         return str(
             await self.plugin.get_kv_data(f"{group_id}_join_comment_black", "") or ""
         ).split(",")
-        
+
+    async def get_join_comment_whitelist(self, group_id: str) -> list[str]:
+        """获取入群申请评论白名单列表"""
+        return str(
+            await self.plugin.get_kv_data(f"{group_id}_join_comment_white", "") or ""
+        ).split(",")
+
     async def get_join_level(self, group_id: str) -> int:
         """获取入群批准难度等级"""
         return await self.plugin.get_kv_data(f"{group_id}_join_level", 0) or 0
-    
+
     async def can_reject(self, group_id: str) -> bool:
         """获取是否自动拒绝"""
         return await self.plugin.get_kv_data(f"{group_id}_join_reject", False) or False
-    
+
     async def get_group_blacklist(self, group_id: str) -> list[str]:
         """获取群黑名单列表"""
         return str(
             await self.plugin.get_kv_data(f"{group_id}_blacklist", "") or ""
         ).split(",")
-        
+
     async def get_global_blacklist(self, group_id: str) -> list[str]:
         """获取全局黑名单列表"""
-        return str(
-            await self.plugin.get_kv_data(f"global_blacklist", "") or ""
-        ).split(",")
-        
+        return str(await self.plugin.get_kv_data(f"global_blacklist", "") or "").split(
+            ","
+        )
+
     async def is_astr_admin(self, user_id: str) -> bool:
         admin_list = self.plugin.astr_config.get("admins_id", [])
         return user_id in admin_list
-    async def can_approve(
-        self, comment: str, group_id: str, level: int, user_id: str
-    ):
+
+    async def can_approve(self, comment: str, group_id: str, level: int, user_id: str):
         # 全局黑名单检测
         global_blacklist = await self.get_global_blacklist(group_id)
-        logger.info(f"Checking global blacklist for user {user_id} in group {group_id}: {global_blacklist}")
+        logger.info(
+            f"Checking global blacklist for user {user_id} in group {group_id}: {global_blacklist}"
+        )
         for black in global_blacklist:
             if black.startswith(f"{user_id}"):
                 return False, "用户在全局黑名单中"
         # 群黑名单检测
         group_blacklist = await self.get_group_blacklist(group_id)
-        logger.info(f"Checking group blacklist for user {user_id} in group {group_id}: {group_blacklist}")
+        logger.info(
+            f"Checking group blacklist for user {user_id} in group {group_id}: {group_blacklist}"
+        )
         for black in group_blacklist:
             if black.startswith(f"{user_id}"):
                 return False, "用户在黑名单中"
         # GitHub 入群检测
         if await self.is_github_enable(group_id):
-            logger.info(f"GitHub join check enabled for group {group_id}, checking comment: {comment}")
-            lastest_hash =  await self.get_github_repo_lastest_hash(group_id)
-            if (
-               not (lastest_hash is not None
+            logger.info(
+                f"GitHub join check enabled for group {group_id}, checking comment: {comment}"
+            )
+            lastest_hash = await self.get_github_repo_lastest_hash(group_id)
+            if not (
+                lastest_hash is not None
                 and comment != ""
                 and lastest_hash.startswith(comment)
-                and level >= await self.get_join_level(group_id))
+                and level >= await self.get_join_level(group_id)
             ):
-                logger.info(f"GitHub join check failed for user {user_id} in group {group_id}: lastest_hash={lastest_hash}, comment={comment}, level={level}, required_level={self.get_join_level(group_id)}")
+                logger.info(
+                    f"GitHub join check failed for user {user_id} in group {group_id}: lastest_hash={lastest_hash}, comment={comment}, level={level}, required_level={self.get_join_level(group_id)}"
+                )
                 return False, "错误的 GitHub 提交哈希，或者入群等级不足"
-        # 黑名单备注检测
+        # 黑白名单备注检测
         comment_blacklist = await self.get_join_comment_blacklist(group_id)
-        logger.info(f"Checking comment blacklist for user {user_id} in group {group_id}: {comment_blacklist}")
+        comment_whitelist = await self.get_join_comment_whitelist(group_id)
+        logger.info(
+            f"Checking comment blacklist for user {user_id} in group {group_id}: {comment_blacklist}"
+        )
         for black in comment_blacklist:
             if black != None and len(black) > 0 and black in comment:
                 return False, "备注内容在黑名单中"
+        logger.info(
+            f"Checking comment whitelist for user {user_id} in group {group_id}: {comment_whitelist}"
+        )
+        for white in comment_whitelist:
+            if white != None and len(white) > 0 and white in comment:
+                return True, "入群申请通过"
         if level < await self.get_join_level(group_id):
             return False, "入群等级不足"
         return True, "入群申请通过"

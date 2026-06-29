@@ -24,18 +24,20 @@ class GMPlugin(Star):
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
-    
+
     # 判断是否可以调用指令
-    async def can_invoke(self, event:AstrMessageEvent) -> bool:
+    async def can_invoke(self, event: AstrMessageEvent) -> bool:
         group_id = event.get_group_id()
         user_id = event.get_sender_id()
         # 用户是否为astrbot 管理员
         is_admin = event.is_admin()
-         # 可否管理员/群主调用
-        can_admin  = await self.get_kv_data(f"{group_id}_can_admin", False) or False
+        # 可否管理员/群主调用
+        can_admin = await self.get_kv_data(f"{group_id}_can_admin", False) or False
         # 获取astrbot管理员列表
         admin_list = self.astr_config.get("admins_id", [])
-        logger.info(f"Checking permissions for user {user_id} in group {group_id}: is_admin={is_admin}, can_admin={can_admin}, admin_list={admin_list}")
+        logger.info(
+            f"Checking permissions for user {user_id} in group {group_id}: is_admin={is_admin}, can_admin={can_admin}, admin_list={admin_list}"
+        )
         return user_id in admin_list or (is_admin and can_admin)
 
     # gm指令组
@@ -43,12 +45,13 @@ class GMPlugin(Star):
     @filter.command_group("gm", aliases=["群管"])
     def gm(self):
         pass
-    
-    
+
     # 群黑名单配置指令 - 加入黑名单
     # 用法: /gm black @用户/用户id [原因]
-    @gm.command("black", aliases=["黑","黑名单","拉黑"])
-    async def gm_black(self, event: AstrMessageEvent,userid:str| None, reason: str | None):
+    @gm.command("black", aliases=["黑", "黑名单", "拉黑"])
+    async def gm_black(
+        self, event: AstrMessageEvent, userid: str | None, reason: str | None
+    ):
         """群黑名单配置指令
         Args:
             userid(str): 用户id或@用户
@@ -57,13 +60,13 @@ class GMPlugin(Star):
         if not await self.can_invoke(event):
             yield event.plain_result("你没有权限使用这个指令哦")
             return
-        
+
         user_id = None
         if userid != None and len(userid) > 0 and userid.isdigit():
             user_id = str(userid)
         else:
             for msg in event.message_obj.message:
-                if isinstance(msg,At):
+                if isinstance(msg, At):
                     if msg.qq != "all" and msg.qq != event.get_self_id():
                         user_id = str(msg.qq)
                         break
@@ -75,11 +78,11 @@ class GMPlugin(Star):
         black_list.append(f"{user_id};{reason}")
         await self.put_kv_data(f"{group_id}_blacklist", ",".join(set(black_list)))
         yield event.plain_result(f"已经将用户加入黑名单: {user_id}")
-    
+
     # 群黑名单配置指令 - 删除黑名单
     # 用法: /gm delblack @用户/用户id
-    @gm.command("delblack", aliases=["删黑","移出黑名单","删除黑名单"])
-    async def gm_delblack(self, event: AstrMessageEvent, userid:str| None):
+    @gm.command("delblack", aliases=["删黑", "移出黑名单", "删除黑名单"])
+    async def gm_delblack(self, event: AstrMessageEvent, userid: str | None):
         """群黑名单配置指令
         Args:
             userid(str): 用户id或@用户
@@ -87,14 +90,14 @@ class GMPlugin(Star):
         if not await self.can_invoke(event):
             yield event.plain_result("你没有权限使用这个指令哦")
             return
-        
+
         user_id = None
         logger.info(f"Parsing user_id for delblack command: userid={userid}")
         if userid != None and len(userid) > 0 and userid.isdigit():
             user_id = str(userid)
         else:
             for msg in event.message_obj.message:
-                if isinstance(msg,At):
+                if isinstance(msg, At):
                     if msg.qq != "all" and msg.qq != event.get_self_id():
                         user_id = str(msg.qq)
                         break
@@ -108,20 +111,20 @@ class GMPlugin(Star):
                 black_list.remove(black)
         await self.put_kv_data(f"{group_id}_blacklist", ",".join(set(black_list)))
         yield event.plain_result(f"已经将用户移出黑名单: {user_id}")
-        
-
 
     ################################################################
     # 入群配置指令组
     # 用法: /gm join
-    @gm.group("join", aliases=["入群","加群"])
+    @gm.group("join", aliases=["入群", "加群"])
     def gmjoin(self):
         """入群批准配置指令"""
         pass
-    
+
     # 入群批准配置指令 - 开关
     # 用法: /gm join enable true/1/yes/on/开/开启/enable/启用
-    @gmjoin.command("enable", aliases=["switch","status","开关","状态","开","on","启用"])
+    @gmjoin.command(
+        "enable", aliases=["switch", "status", "开关", "状态", "开", "on", "启用"]
+    )
     async def join_enable(self, event: AstrMessageEvent, enable: str | None):
         """入群批准配置指令 - 开关
         Args:
@@ -133,8 +136,21 @@ class GMPlugin(Star):
         group_id = event.get_group_id()
         if enable is None:
             # 空则从消息取状态
-            status = "开" in event.get_message_str() or "on" in event.get_message_str() or "启用" in event.get_message_str()
-        elif enable.lower() in ["true", "1", "yes", "on","开","开启","enable","启用"]:
+            status = (
+                "开" in event.get_message_str()
+                or "on" in event.get_message_str()
+                or "启用" in event.get_message_str()
+            )
+        elif enable.lower() in [
+            "true",
+            "1",
+            "yes",
+            "on",
+            "开",
+            "开启",
+            "enable",
+            "启用",
+        ]:
             status = True
         else:
             status = False
@@ -146,7 +162,7 @@ class GMPlugin(Star):
 
     # 入群批准配置指令 - 等级
     # 用法: /gm join level 等级
-    @gmjoin.command("level", aliases=["grade","rank","等级","级别"])
+    @gmjoin.command("level", aliases=["grade", "rank", "等级", "级别"])
     async def join_level(self, event: AstrMessageEvent, level: int | None):
         """入群批准配置指令 - 等级
         Args:
@@ -161,11 +177,15 @@ class GMPlugin(Star):
         group_id = event.get_group_id()
         await self.put_kv_data(f"{group_id}_join_level", level)
         yield event.plain_result(f"已经设置入群等级为: {level}")
-        
-    
+
     # 入群批准配置指令 - GitHub
     # 用法: /gm join github github仓库
-    @gmjoin.command("github", aliases=["gh",])
+    @gmjoin.command(
+        "github",
+        aliases=[
+            "gh",
+        ],
+    )
     async def join_github(self, event: AstrMessageEvent, repo: str | None):
         """入群批准配置指令 - GitHub
         用户入群需要在入群时备注当前配置GitHub仓库的最新提交hash,最少7位
@@ -180,13 +200,13 @@ class GMPlugin(Star):
             await self.delete_kv_data(f"{group_id}_join_github")
             yield event.plain_result("已删除入群GitHub仓库配置")
             return
-        
+
         await self.put_kv_data(f"{group_id}_join_github", repo)
         yield event.plain_result(f"已经设置入群GitHub仓库为: {repo}")
-        
+
     # 入群批准配置指令 - 自动拒绝
     # 用法: /gm join reject true/1/yes/on/开/开启/enable/启用
-    @gmjoin.command("reject", aliases=["拒绝","自动拒绝"])
+    @gmjoin.command("reject", aliases=["拒绝", "自动拒绝"])
     async def join_reject(self, event: AstrMessageEvent, enable: str | None):
         """入群批准配置指令 - 自动拒绝
         Args:
@@ -198,9 +218,20 @@ class GMPlugin(Star):
         group_id = event.get_group_id()
         if enable is None:
             # 空则从消息取状态
-            yield event.plain_result("指令用法: /gm join reject <true/1/yes/on/开/开启/enable/启用>")
+            yield event.plain_result(
+                "指令用法: /gm join reject <true/1/yes/on/开/开启/enable/启用>"
+            )
             return
-        elif enable.lower() in ["true", "1", "yes", "on","开","开启","enable","启用"]:
+        elif enable.lower() in [
+            "true",
+            "1",
+            "yes",
+            "on",
+            "开",
+            "开启",
+            "enable",
+            "启用",
+        ]:
             status = True
         else:
             status = False
@@ -209,7 +240,6 @@ class GMPlugin(Star):
             yield event.plain_result(f"已开启自动拒绝入群")
         else:
             yield event.plain_result(f"已关闭自动拒绝入群")
-    
 
     ################################################################
     # 入群备注配置指令组
@@ -218,10 +248,12 @@ class GMPlugin(Star):
     def gmjoincomment(self):
         """入群批准备注配置指令"""
         pass
-    
+
     # 入群备注配置指令组 - 黑名单
     # 用法: /gm join comment black 黑名单词汇1,词汇2;词汇3/词汇4:词汇5. 词汇6
-    @gmjoincomment.command("black", aliases=["block","ban","黑","屏蔽","禁止","黑名单"])
+    @gmjoincomment.command(
+        "black", aliases=["block", "ban", "黑", "屏蔽", "禁止", "黑名单"]
+    )
     async def comment_black(self, event: AstrMessageEvent, comment: GreedyStr):
         """入群批准配置指令 - 备注 - 黑名单
         Args:
@@ -232,7 +264,9 @@ class GMPlugin(Star):
             return
 
         group_id = event.get_group_id()
-        src_list = str(await self.get_kv_data(f"{group_id}_join_comment_black", "")).split(",")
+        src_list = str(
+            await self.get_kv_data(f"{group_id}_join_comment_black", "")
+        ).split(",")
         black_list = list[str]()
         black_list.extend(comment.split(","))
         black_list.extend(comment.split(";"))
@@ -244,10 +278,40 @@ class GMPlugin(Star):
         black_list = ",".join(set(black_list))
         await self.put_kv_data(f"{group_id}_join_comment_black", black_list)
         yield event.plain_result(f"已经添加入群备注黑名单: {black_list}")
-    
-    # 入群备注配置指令组 - 删除黑名单
-    # 用法: /gm join comment delblack 黑名单词汇1,词汇2;词汇3/词汇4:词汇5. 词汇6
-    @gmjoincomment.command("delblack", aliases=["deleteblack","removeblack","删黑","删除黑名单"])
+
+    # 入群备注配置指令组 - 白名单
+    # 用法: /gm join comment white 白名单词汇1,词汇2;词汇3/词汇4:词汇5. 词汇6
+    @gmjoincomment.command("white", aliases=["approve", "白", "允许", "白名单"])
+    async def comment_white(self, event: AstrMessageEvent, comment: GreedyStr):
+        """入群批准配置指令 - 备注 - 白名单
+        Args:
+            comment(GreedyStr): 备注白名单词汇
+        """
+        if not await self.can_invoke(event):
+            yield event.plain_result("你没有权限使用这个指令哦")
+            return
+
+        group_id = event.get_group_id()
+        src_list = str(
+            await self.get_kv_data(f"{group_id}_join_comment_white", "")
+        ).split(",")
+        white_list = list[str]()
+        white_list.extend(comment.split(","))
+        white_list.extend(comment.split(";"))
+        white_list.extend(comment.split("/"))
+        white_list.extend(comment.split(":"))
+        white_list.extend(comment.split("."))
+        white_list.extend(comment.split(" "))
+        white_list.extend(src_list)
+        white_list = ",".join(set(white_list))
+        await self.put_kv_data(f"{group_id}_join_comment_white", white_list)
+        yield event.plain_result(f"已经添加入群备注白名单: {white_list}")
+
+    # 入群备注配置指令组 - 删除白名单
+    # 用法: /gm join comment delwhite 白名单词汇1,词汇2;词汇3/词汇4:词汇5. 词汇6
+    @gmjoincomment.command(
+        "delblack", aliases=["deleteblack", "removeblack", "删黑", "删除黑名单"]
+    )
     async def comment_delblack(self, event: AstrMessageEvent, comment: GreedyStr):
         """入群批准配置指令 - 备注 - 删除黑名单
         Args:
@@ -258,7 +322,9 @@ class GMPlugin(Star):
             return
 
         group_id = event.get_group_id()
-        src_list = str(await self.get_kv_data(f"{group_id}_join_comment_black", "")).split(",")
+        src_list = str(
+            await self.get_kv_data(f"{group_id}_join_comment_black", "")
+        ).split(",")
         black_list = list[str]()
         black_list.extend(comment.split(","))
         black_list.extend(comment.split(";"))
@@ -270,10 +336,10 @@ class GMPlugin(Star):
         for black in black_list:
             if black in src_list:
                 src_list.remove(black)
-                
+
         await self.put_kv_data(f"{group_id}_join_comment_black", ",".join(src_list))
         yield event.plain_result(f"已经删除入群备注黑名单: {black_list}")
-    
+
     # 入群事件处理器，分平台处理
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def handle_join_request(self, event: AstrMessageEvent):
@@ -282,7 +348,7 @@ class GMPlugin(Star):
             await self.platform_onebot.handle_join_request(event)
         else:
             return
-    
+
     ################################################################
     # 全局配置指令组
     # 仅astrbot管理员可用
@@ -291,14 +357,15 @@ class GMPlugin(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     def gmglobal(self):
         pass
-    
-    
+
     # 全局黑名单配置指令 - 加入黑名单
     # 仅astrbot管理员可用
     # 用法: /gm global black @用户/用户id [原因]
-    @gmglobal.command("black", aliases=["黑","黑名单","拉黑"])
+    @gmglobal.command("black", aliases=["黑", "黑名单", "拉黑"])
     @filter.permission_type(filter.PermissionType.ADMIN)
-    async def global_black(self, event: AstrMessageEvent,userid:str| None , reason: str | None):
+    async def global_black(
+        self, event: AstrMessageEvent, userid: str | None, reason: str | None
+    ):
         """全局黑名单配置指令
         Args:
             userid(str): 用户id或@用户
@@ -307,13 +374,13 @@ class GMPlugin(Star):
         if not await self.can_invoke(event):
             yield event.plain_result("你没有权限使用这个指令哦")
             return
-        
+
         user_id = None
         if userid != None and len(userid) > 0 and userid.isdigit():
             user_id = str(userid)
         else:
             for msg in event.message_obj.message:
-                if isinstance(msg,At):
+                if isinstance(msg, At):
                     if msg.qq != "all" and msg.qq != event.get_self_id():
                         user_id = str(msg.qq)
                         break
@@ -324,13 +391,13 @@ class GMPlugin(Star):
         black_list.append(f"{user_id};{reason}")
         await self.put_kv_data(f"global_blacklist", ",".join(set(black_list)))
         yield event.plain_result(f"已经将用户加入黑名单: {user_id}")
-    
+
     # 全局黑名单配置指令 - 删除黑名单
     # 仅astrbot管理员可用
     # 用法: /gm global delblack @用户/用户id
-    @gmglobal.command("delblack", aliases=["删黑","移出黑名单","删除黑名单"])
+    @gmglobal.command("delblack", aliases=["删黑", "移出黑名单", "删除黑名单"])
     @filter.permission_type(filter.PermissionType.ADMIN)
-    async def global_delblack(self, event: AstrMessageEvent,userid:str| None):
+    async def global_delblack(self, event: AstrMessageEvent, userid: str | None):
         """全局黑名单配置指令
         Args:
             userid(str): 用户id或@用户
@@ -338,13 +405,13 @@ class GMPlugin(Star):
         if not await self.can_invoke(event):
             yield event.plain_result("你没有权限使用这个指令哦")
             return
-        
+
         user_id = None
         if userid != None and len(userid) > 0 and userid.isdigit():
             user_id = str(userid)
         else:
             for msg in event.message_obj.message:
-                if isinstance(msg,At):
+                if isinstance(msg, At):
                     if msg.qq != "all" and msg.qq != event.get_self_id():
                         user_id = str(msg.qq)
                         break
@@ -357,4 +424,3 @@ class GMPlugin(Star):
                 black_list.remove(black)
         await self.put_kv_data(f"global_blacklist", ",".join(set(black_list)))
         yield event.plain_result(f"已经将用户移出黑名单: {user_id}")
-        
