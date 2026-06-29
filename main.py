@@ -204,6 +204,50 @@ class GMPlugin(Star):
         await self.put_kv_data(f"{group_id}_join_github", repo)
         yield event.plain_result(f"已经设置入群GitHub仓库为: {repo}")
 
+    # 入群批准配置指令 - GitHub
+    # 用法: /gm join github github仓库
+    @gmjoin.command(
+        "notify",
+        aliases=[
+            "通知",
+        ],
+    )
+    async def join_notify(self, event: AstrMessageEvent, enable: str | None):
+        """入群批准配置指令 - GitHub
+        用户入群需要在入群时备注当前配置GitHub仓库的最新提交hash,最少7位
+        Args:
+            repo(str): GitHub仓库地址
+        """
+        if not await self.can_invoke(event):
+            yield event.plain_result("你没有权限使用这个指令哦")
+            return
+        group_id = event.get_group_id()
+        if enable is None:
+            # 空则从消息取状态
+            status = (
+                "开" in event.get_message_str()
+                or "on" in event.get_message_str()
+                or "启用" in event.get_message_str()
+            )
+        elif enable.lower() in [
+            "true",
+            "1",
+            "yes",
+            "on",
+            "开",
+            "开启",
+            "enable",
+            "启用",
+        ]:
+            status = True
+        else:
+            status = False
+        await self.put_kv_data(f"{group_id}_join_notify", status)
+        if status:
+            yield event.plain_result(f"已开启入群通知")
+        else:
+            yield event.plain_result(f"已关闭入群通知")
+
     # 入群批准配置指令 - 自动拒绝
     # 用法: /gm join reject true/1/yes/on/开/开启/enable/启用
     @gmjoin.command("reject", aliases=["拒绝", "自动拒绝"])

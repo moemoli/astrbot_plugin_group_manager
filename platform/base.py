@@ -13,6 +13,10 @@ class PlatformBase:
         """检查入群批准是否开启"""
         return await self.plugin.get_kv_data(f"{group_id}_join_enable", False) or False
 
+    async def can_join_notify(self, group_id: str) -> bool:
+        """检查入群批准是否通知"""
+        return await self.plugin.get_kv_data(f"{group_id}_join_notify", False) or False
+
     async def is_github_enable(self, group_id: str) -> bool:
         """检查 GitHub 入群是否开启"""
         return await self.get_github_repo(group_id) is not None
@@ -118,15 +122,18 @@ class PlatformBase:
         )
         for black in comment_blacklist:
             if black != None and len(black) > 0 and black in comment:
-                return False, "备注内容在黑名单中"
+                return False, "黑名单命中"
         logger.info(
             f"Checking comment whitelist for user {user_id} in group {group_id}: {comment_whitelist}"
         )
+        white_approve = len(comment_whitelist) < 1
         for white in comment_whitelist:
             if white != None and len(white) > 0 and white in comment:
-                return True, "入群申请通过"
+                white_approve = True
         if level < await self.get_join_level(group_id):
             return False, "入群等级不足"
+        if not white_approve:
+            return False, "未命中白名单"
         return True, "入群申请通过"
 
     def handle_join_request(self, event: AstrMessageEvent):

@@ -47,7 +47,7 @@ class PlatformOneBot(PlatformBase):
                             info = await event.bot.get_stranger_info(
                                 user_id=int(user_id)
                             )
-                            level = info["qqLevel"] or 0
+                            level = info["level"] or 0
 
                             can_approve, reason = await self.can_approve(
                                 comment=comment,
@@ -55,19 +55,21 @@ class PlatformOneBot(PlatformBase):
                                 level=level,
                                 user_id=user_id,
                             )
+                            can_notify = await self.can_join_notify(group_id)
                             logger.info(
-                                f"Approval result for user {user_id} in group {group_id}: can_approve={can_approve}, reason={reason}, comment={comment}"
+                                f"Approval result for user {user_id} in group {group_id}: can_approve={can_approve}, reason={reason}, comment={comment}, can_notify={can_notify}"
                             )
                             if can_approve:
                                 await event.bot.set_group_add_request(
                                     flag=flag, sub_type=sub_type, approve=True
                                 )
-                                await event.bot.send_group_msg(
-                                    group_id=group_id,
-                                    message=MessageSegment.text(
-                                        f"用户 {info['nickname']}({user_id})  通过审核，已自动同意加群。"
-                                    ),
-                                )
+                                if can_notify:
+                                    await event.bot.send_group_msg(
+                                        group_id=group_id,
+                                        message=MessageSegment.text(
+                                            f"用户 {info['nickname']}({user_id})  通过审核，已自动同意加群。"
+                                        ),
+                                    )
                             else:
                                 if await self.can_reject(group_id):
                                     await event.bot.set_group_add_request(
@@ -76,7 +78,8 @@ class PlatformOneBot(PlatformBase):
                                     msg = f"用户 {info['nickname']}({user_id})  未通过审核，已自动拒绝加群。\n原因: {reason}\n请求内容: {comment}"
                                 else:
                                     msg = f"用户 {info['nickname']}({user_id})  未通过审核，请手动审核。\n原因: {reason}\n请求内容: {comment}"
-                                await event.bot.send_group_msg(
-                                    group_id=group_id,
-                                    message=MessageSegment.text(msg),
-                                )
+                                if can_notify:
+                                    await event.bot.send_group_msg(
+                                        group_id=group_id,
+                                        message=MessageSegment.text(msg),
+                                    )
