@@ -525,3 +525,54 @@ input[type="number"].form-input {
         width: 100%;
     }
 }
+
+/* ========== 侧边栏底部操作区 ========== */
+.sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-footer .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+    padding: 8px 12px;
+}
+
+.sidebar-footer .btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ========== 导入进度遮罩 ========== */
+.import-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 2000;
+}
+
+.import-overlay .spinner {
+    width: 48px;
+    height: 48px;
+}
+
+.import-status {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.import-detail {
+    color: var(--text-secondary);
+    font-size: 13px;
+}

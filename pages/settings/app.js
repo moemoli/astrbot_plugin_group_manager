@@ -274,7 +274,157 @@ function showToast(message, type = 'success') {
 }
 
 
+
+// ==================== 导出所有配置 ====================
+async function exportAllSettings() {
+    if (!groups || groups.length === 0) {
+        showToast('暂无群聊数据可导出', 'error');
+        return;
+    }
+
+    showToast('正在扫描群聊配置...', 'success');
+
+    // 第一步：用 has 接口筛选出有配置的群
+    const hasPromises = groups.map(async g => {
+        try {
+            const res = await bridge.apiGet('settings/has', { id: g.id });
+            if (res.code == 1) {
+                return g;
+            }
+        } catch (e) {
+            console.error(`检查群 ${g.id} 配置失败:`, e);
+        }
+        return null;
+    });
+
+    const groupsWithConfig = (await Promise.all(hasPromises)).filter(Boolean);
+
+    if (groupsWithConfig.length === 0) {
+        showToast('没有已配置的群聊', 'error');
+        return;
+    }
+
+    showToast(`发现 ${groupsWithConfig.length} 个已配置群聊，正在导出...`, 'success');
+
+    // 第二步：加载这些群的详细配置
+    const loadPromises = groupsWithConfig.map(async g => {
+        try {
+            const res = await bridge.apiGet('settings/load', { id: g.id });
+            if (res.code == undefined) {
+                return {
+                    id: g.id,
+                    ...res
+                };
+            }
+        } catch (e) {
+            console.error(`加载群 ${g.id} 配置失败:`, e);
+        }
+        return null;
+    });
+
+    const configs = (await Promise.all(loadPromises)).filter(Boolean);
+
+    const exportData = {
+        export_time: new Date().toISOString(),
+        plugin: 'group_manager',
+        version: '1.0.0',
+        groups: configs
+    };
+
+    // 下载文件
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `group_manager_config_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`成功导出 ${configs.length} 个群的配置`, 'success');
+}
+
+// ==================== 导入配置 ====================
+function handleImportFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        let overlay = null;
+        try {
+            const content = JSON.parse(e.target.result);
+            if (!content.groups || !Array.isArray(content.groups)) {
+                throw new Error('文件格式错误，缺少 groups 数组');
+            }
+
+            // 显示导入进度遮罩
+            overlay = document.createElement('div');
+            overlay.className = 'import-overlay';
+            overlay.innerHTML = `
+                <div class="spinner"></div>
+                <div class="import-status">正在导入配置...</div>
+                <div class="import-detail">0 / ${content.groups.length}</div>
+            `;
+            document.body.appendChild(overlay);
+
+            let success = 0, fail = 0, skip = 0;
+            const detailEl = overlay.querySelector('.import-detail');
+
+            for (let i = 0; i < content.groups.length; i++) {
+                const g = content.groups[i];
+                if (!g.id) { skip++; continue; }
+
+                detailEl.textContent = `${i + 1} / ${content.groups.length}`;
+
+                try {
+                    const payload = {
+                        id: g.id,
+                        enable: g.enable ?? false,
+                        answer: g.answer ?? '',
+                        level: g.level ?? -1,
+                        notify_enable: g.notify_enable ?? false,
+                        notify_content: g.notify_content ?? ''
+                    };
+                    const res = await bridge.apiPost('settings/save', payload);
+                    if (res.code === 0 || res.code === undefined) {
+                        success++;
+                    } else {
+                        fail++;
+                    }
+                } catch (err) {
+                    fail++;
+                }
+            }
+
+            if (overlay) {
+                document.body.removeChild(overlay);
+                overlay = null;
+            }
+
+            const msg = `导入完成: ${success} 成功${fail > 0 ? ', ' + fail + ' 失败' : ''}${skip > 0 ? ', ' + skip + ' 跳过' : ''}`;
+            showToast(msg, fail > 0 ? 'error' : 'success');
+
+            // 刷新当前选中群的显示
+            if (currentGroup) {
+                await loadGroupSettings(currentGroup.id);
+            }
+        } catch (err) {
+            if (overlay && document.body.contains(overlay)) {
+                document.body.removeChild(overlay);
+            }
+            showToast('导入失败: ' + err.message, 'error');
+        } finally {
+            input.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
 window.selectGroup = selectGroup;
 window.resetSettings = resetSettings;
 window.saveSettings = saveSettings;
 window.updateSetting = updateSetting;
+window.exportAllSettings = exportAllSettings;
+window.handleImportFile = handleImportFile;
