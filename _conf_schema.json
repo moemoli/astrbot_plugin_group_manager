@@ -1,7 +1,12 @@
 {
-  "github_token": {
-    "description": "GitHub Token",
-    "hint": "用于避免GitHub API请求频繁的问题",
-    "type": "string"
+  "auto_approve_friend": {
+    "description": "自动同意好友申请",
+    "hint": "设置机器人是否自动同意好友申请",
+    "type": "bool"
+  },
+  "auto_approve_group": {
+    "description": "自动同意入群邀请",
+    "hint": "设置机器人是否自动同意入群邀请，关闭则仅同意管理员邀请",
+    "type": "bool"
   }
 }
