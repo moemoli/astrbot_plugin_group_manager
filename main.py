@@ -49,6 +49,14 @@ class GMPlugin(Star):
             "Save group settings",
         )
 
+        # 群设置存在性检查接口
+        context.register_web_api(
+            f"/{PLUGIN_NAME}/settings/has",
+            self.api.has_setting,
+            ["GET"],
+            "Check if group settings exist",
+        )
+
     async def is_astr_admin(self, user_id: str) -> bool:
         admin_list = self.astr_config.get("admins_id", [])
         return user_id in admin_list

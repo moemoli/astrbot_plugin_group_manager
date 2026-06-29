@@ -88,6 +88,18 @@ class GroupManagerApi:
 
         return GroupSetting(enable, answer, level, notify_enable, notify_content)
 
+    async def has_setting(self):
+        """判断群组设置"""
+        group_id = request.query.get("id", "", str)
+        if group_id == "":
+            return json_response({"code": -1})
+
+        enable = await self.plugin.get_kv_data(f"{group_id}_enable", None)
+        if enable is None:
+            return json_response({"code": 2})
+
+        return json_response({"code": 1})
+
     async def save_setting(self):
         """修改群组设置"""
         payload = await request.json(default={})
