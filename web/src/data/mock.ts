@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ApiEnvelope,
   GroupItem,
   HasSettingsEnvelope,
@@ -8,10 +8,18 @@ import type {
 
 const defaultSettings: SettingsLoadData = {
   enable: true,
-  answer: '这是测试环境的默认回复',
+  answer: 'This is the default reply in test environment.',
   level: 2,
   notify_enable: false,
   notify_content: null,
+  blacklist_enabled: false,
+  blacklist_scope: 'group',
+  violation_recall_enabled: false,
+  violation_recall_types: [],
+  violation_keywords: [],
+  violation_action: 'warn',
+  violation_mute_duration: 60,
+  warning_thresholds: [],
 }
 
 const settingsStore = new Map<string, SettingsLoadData>()
@@ -33,19 +41,19 @@ export async function getGroupsFromMock(): Promise<ApiEnvelope<GroupItem[]>> {
     d: [
       {
         id: '10001',
-        name: 'AstrBot 开发群',
+        name: 'AstrBot Dev Group',
         max: 200,
         now: 128,
       },
       {
         id: '10002',
-        name: '插件内测群',
+        name: 'Plugin Test Group',
         max: 100,
         now: 64,
       },
       {
         id: '10003',
-        name: '运营反馈群',
+        name: 'Operations Feedback Group',
         max: 300,
         now: 212,
       },
@@ -73,6 +81,14 @@ export async function saveSettingsFromMock(
     level: payload.level,
     notify_enable: payload.notify_enable,
     notify_content: payload.notify_content,
+    blacklist_enabled: payload.blacklist_enabled,
+    blacklist_scope: payload.blacklist_scope,
+    violation_recall_enabled: payload.violation_recall_enabled,
+    violation_recall_types: payload.violation_recall_types,
+    violation_keywords: payload.violation_keywords,
+    violation_action: payload.violation_action,
+    violation_mute_duration: payload.violation_mute_duration,
+    warning_thresholds: payload.warning_thresholds,
   }
   settingsStore.set(groupId, merged)
 
