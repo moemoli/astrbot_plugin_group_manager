@@ -152,7 +152,7 @@ async function onEditSettings(item: GroupItem) {
   activeGroup.value = item; settingsDrawerVisible.value = true
   await loadGroupSettings(item)
 }
-async function onSaveSettingsClick() { console.log('[save] onSaveSettingsClick'); if (await persistGroupSettings(true)) settingsDrawerVisible.value = false }
+async function onSaveSettingsClick() { if (await persistGroupSettings(true)) settingsDrawerVisible.value = false }
 async function onDrawerBeforeClose(done: () => void) { if (await persistGroupSettings(true)) done() }
 function onDrawerClosed() { activeGroup.value = null; settingsForm.value = { ...defaultSettingsForm }; keywordInputVisible.value = false; keywordInputValue.value = "" }
 
