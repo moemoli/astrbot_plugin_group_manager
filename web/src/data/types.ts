@@ -1,4 +1,4 @@
-﻿export interface GroupItem {
+export interface GroupItem {
   id: string
   name: string
   max: number
@@ -6,6 +6,7 @@
 }
 
 export interface WarningThreshold {
+  operator: string
   count: number
   action: string
   mute_duration: number

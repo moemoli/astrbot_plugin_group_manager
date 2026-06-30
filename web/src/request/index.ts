@@ -106,11 +106,23 @@ export async function requestGet<T = unknown>(
   return getBridge().apiGet<T>(normalizeEndpoint(endpoint), params)
 }
 
+function deepClone(obj: unknown): unknown {
+  if (obj === null || typeof obj !== 'object') return obj
+  if (Array.isArray(obj)) return obj.map(deepClone)
+  const result: Record<string, unknown> = {}
+  for (const key of Object.keys(obj as Record<string, unknown>)) {
+    result[key] = deepClone((obj as Record<string, unknown>)[key])
+  }
+  return result
+}
+
 export async function requestPost<T = unknown>(
   endpoint: string,
   body?: unknown,
 ): Promise<T> {
-  return getBridge().apiPost<T>(normalizeEndpoint(endpoint), body)
+  const ep = normalizeEndpoint(endpoint)
+  const safeBody = deepClone(body) as Record<string, unknown>
+  return getBridge().apiPost<T>(ep, safeBody)
 }
 
 export async function requestUpload<T = unknown>(

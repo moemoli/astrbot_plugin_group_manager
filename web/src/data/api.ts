@@ -8,7 +8,8 @@ import type {
 } from './types'
 
 export async function getGroupsFromApi(): Promise<ApiEnvelope<GroupItem[]>> {
-  return requestGet<ApiEnvelope<GroupItem[]>>('groups')
+  const res = await requestGet<ApiEnvelope<GroupItem[]>>('groups')
+  return { c: res.c, d: res.d.map((g) => ({ ...g, id: String(g.id) })) }
 }
 
 export async function getSettingsLoadFromApi(

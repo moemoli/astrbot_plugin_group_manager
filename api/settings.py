@@ -1,4 +1,4 @@
-from astrbot.api.web import json_response, request
+﻿from astrbot.api.web import json_response, request
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import (
     AiocqhttpAdapter,
 )
@@ -134,7 +134,7 @@ class GroupManagerApi:
                         "now": group.get("member_count", 0),
                     }
                 )
-        return json_response(groups)
+        return json_response({"c": 0, "d": groups})
 
     async def get_setting(self):
         """Get group setting."""

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CircleCloseFilled, Download, Refresh, Search, Upload } from '@element-plus/icons-vue'
-import { ElLoading, ElMessage, ElNotification } from 'element-plus'
+import { ElLoading, ElNotification } from 'element-plus'
+import { initBridgeContext } from '@/request'
 import { dataSourceName, getGroups, getSettingsLoad, hasSettings, saveSettings } from '@/data'
 import type { GroupItem, SettingsExportItem, SettingsLoadData, WarningThreshold } from '@/data/types'
 
@@ -97,7 +98,7 @@ watch(loading, (isLoading) => {
   closeOverlayTimer = setTimeout(() => { closeLoadingOverlay(); closeOverlayTimer = null }, r)
 })
 
-watch(error, (m) => { if (m) ElMessage.error({ message: '数据加载失败', position: 'bottom-right' }) })
+watch(error, (m) => { if (m) ElNotification.error({ title: '错误', message: '数据加载失败', position: 'bottom-right' }) })
 function getAvatarText(n: string): string { return n.slice(0, 1).toUpperCase() }
 function getAvatarUrl(gid: string): string { return 'https://p.qlogo.cn/gh/' + gid + '/' + gid + '/640' }
 function loadMoreLazyGroups() { if (isInfiniteMode.value && hasMoreLazyGroups.value) lazyVisibleCount.value = Math.min(filteredGroups.value.length, lazyVisibleCount.value + LAZY_BATCH_SIZE) }
@@ -122,9 +123,9 @@ async function loadGroupSettings(group: GroupItem) {
   try {
     const result = await getSettingsLoad(group.id)
     if (result.c === 0) { settingsForm.value = normalizeSettingsData(result.d); return }
-    ElMessage.error({ message: '加载群设置失败', position: 'bottom-right' })
-  } catch {
-    ElMessage.error({ message: '加载群设置失败', position: 'bottom-right' })
+    ElNotification.error({ title: '错误', message: '加载群设置失败', position: 'bottom-right' })
+  } catch
+    ElNotification.error({ title: '错误', message: '加载群设置失败', position: 'bottom-right' })
   } finally { loadingSettings.value = false }
 }
 
@@ -132,16 +133,17 @@ async function persistGroupSettings(showNotice: boolean): Promise<boolean> {
   if (!activeGroup.value) return true
   savingSettings.value = true
   try {
-    const result = await saveSettings(toSavePayload(activeGroup.value.id, settingsForm.value))
+    const payload = toSavePayload(activeGroup.value.id, { ...settingsForm.value })
+    const result = await saveSettings(toSavePayload(activeGroup.value.id, JSON.parse(JSON.stringify(settingsForm.value))))
     if (result.c === 0) {
       settingsForm.value = normalizeSettingsData(result.d)
-      if (showNotice) ElMessage.success({ message: '保存成功', position: 'bottom-right' })
+      if (showNotice) ElNotification.success({ title: '成功', message: '保存成功', position: 'bottom-right' })
       return true
     }
-    ElMessage.error({ message: '保存失败', position: 'bottom-right' })
+    ElNotification.error({ title: '错误', message: '保存失败', position: 'bottom-right' })
     return false
-  } catch {
-    ElMessage.error({ message: '保存失败', position: 'bottom-right' })
+  } catch
+    ElNotification.error({ title: '错误', message: '保存失败', position: 'bottom-right' })
     return false
   } finally { savingSettings.value = false }
 }
@@ -150,7 +152,7 @@ async function onEditSettings(item: GroupItem) {
   activeGroup.value = item; settingsDrawerVisible.value = true
   await loadGroupSettings(item)
 }
-async function onSaveSettingsClick() { if (await persistGroupSettings(true)) settingsDrawerVisible.value = false }
+async function onSaveSettingsClick() { console.log('[save] onSaveSettingsClick'); if (await persistGroupSettings(true)) settingsDrawerVisible.value = false }
 async function onDrawerBeforeClose(done: () => void) { if (await persistGroupSettings(true)) done() }
 function onDrawerClosed() { activeGroup.value = null; settingsForm.value = { ...defaultSettingsForm }; keywordInputVisible.value = false; keywordInputValue.value = "" }
 
@@ -172,18 +174,18 @@ function removeThreshold(idx: number) { if (settingsForm.value.warning_threshold
 
 async function onExport() {
   const all = cachedGroups.value
-  if (!all.length) { ElMessage.error({ message: "没有可导出的群", position: "bottom-right" }); return }
+  if (!all.length) { ElNotification.error({ title: '错误', message: "没有可导出的群", position: "bottom-right" }); return }
   const n = ElNotification.info({ title: "正在导出", message: "正在检查各群配置状态...", position: "bottom-right", duration: 0 })
   try {
     const hs = await Promise.all(all.map(async (g) => ({ g, has: (await hasSettings(g.id)).c === 2 })))
     const gs = hs.filter((i) => i.has).map((i) => i.g)
-    if (!gs.length) { ElMessage.warning({ message: "没有群存在配置，无需导出", position: "bottom-right" }); return }
+    if (!gs.length) { ElNotification.warning({ title: '提示', message: "没有群存在配置，无需导出", position: "bottom-right" }); return }
     const sr = await Promise.all(gs.map(async (g) => ({ id: g.id, name: g.name, settings: (await getSettingsLoad(g.id)).c === 0 ? (await getSettingsLoad(g.id)).d : null })))
     const ed = sr.filter((i) => i.settings !== null)
     const b = new Blob([JSON.stringify(ed, null, 2)], { type: "application/json" })
     const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "groups-settings-export.json"; a.click(); URL.revokeObjectURL(u)
-    ElMessage.success({ message: "导出成功，共 " + ed.length + " 条配置", position: "bottom-right" })
-  } catch { ElMessage.error({ message: "导出失败", position: "bottom-right" }) }
+    ElNotification.success({ title: '成功', message: "导出成功，共 " + ed.length + " 条配置", position: "bottom-right" })
+  } catch { ElNotification.error({ title: '错误', message: "导出失败", position: "bottom-right" }) }
   finally { n.close() }
 }
 function onImportClick() { fileInputRef.value?.click() }
@@ -212,16 +214,16 @@ async function onImportChange(event: Event) {
     if (!Array.isArray(parsed)) throw new Error("invalid")
     const items = parsed.filter((i): i is { id: string; name: string; settings: Record<string, unknown> } =>
       i != null && typeof i === "object" && typeof (i as any).id === "string" && (i as any).settings != null && typeof (i as any).settings === "object")
-    if (!items.length) { ElMessage.warning({ message: "文件中没有有效的配置数据", position: "bottom-right" }); return }
+    if (!items.length) { ElNotification.warning({ title: '提示', message: "文件中没有有效的配置数据", position: "bottom-right" }); return }
     const im = ElNotification.info({ title: "正在导入", message: "共 " + items.length + " 条配置，正在写入...", position: "bottom-right", duration: 0 })
     let ok = 0, fail = 0
     try {
       const rs = await Promise.allSettled(items.map(async (i) => { const r = await saveSettings(toSavePayload(i.id, i.settings)); if (r.c !== 0) throw new Error("fail") }))
       for (const r of rs) { if (r.status === "fulfilled") ok++; else fail++ }
     } finally { im.close() }
-    if (!fail) ElMessage.success({ message: "导入完成，共 " + ok + " 条", position: "bottom-right" })
-    else ElMessage.warning({ message: "导入完成，" + ok + " 成功，" + fail + " 失败", position: "bottom-right" })
-  } catch { ElMessage.error({ message: "导入失败，请检查 JSON 格式", position: "bottom-right" }) }
+    if (!fail) ElNotification.success({ title: '成功', message: "导入完成，共 " + ok + " 条", position: "bottom-right" })
+    else ElNotification.warning({ title: '提示', message: "导入完成，" + ok + " 成功，" + fail + " 失败", position: "bottom-right" })
+  } catch { ElNotification.error({ title: '错误', message: "导入失败，请检查 JSON 格式", position: "bottom-right" }) }
   finally { input.value = "" }
 }
 
@@ -235,7 +237,7 @@ async function loadGroups() {
   finally { loading.value = false }
 }
 
-onMounted(loadGroups)
+onMounted(async () => { await initBridgeContext(); loadGroups() })
 onBeforeUnmount(() => { if (closeOverlayTimer) { clearTimeout(closeOverlayTimer); closeOverlayTimer = null } closeLoadingOverlay() })
 </script>
 <template>

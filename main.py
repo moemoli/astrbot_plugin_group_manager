@@ -28,6 +28,13 @@ PLUGIN_NAME = "astrbot_plugin_group_manager"
 
 URL_PATTERN = re.compile(r"https?://\S+")
 
+OPERATOR_FN = {
+    ">=": lambda a, b: a >= b,
+    ">": lambda a, b: a > b,
+    "<": lambda a, b: a < b,
+    "<=": lambda a, b: a <= b,
+}
+
 
 class GMPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -180,9 +187,10 @@ class GMPlugin(Star):
     def _resolve_action_and_duration(self, warn_count: int, setting) -> tuple[str, int]:
         """Determine the punishment action and mute duration based on thresholds.
 
-        Checks warning thresholds in descending order of count using strict
-        greater-than comparison. Falls back to the base violation action when
-        no threshold is matched.
+        Checks warning thresholds in descending order of count. Each threshold
+        can specify an operator (>=, >, <, <=) to control how warn_count is
+        compared. Falls back to the base violation action when no threshold
+        matches.
 
         Args:
             warn_count: Current warning count for the user.
@@ -197,7 +205,10 @@ class GMPlugin(Star):
             reverse=True,
         )
         for threshold in sorted_thresholds:
-            if warn_count > threshold.get("count", 0):
+            count = threshold.get("count", 0)
+            op = threshold.get("operator", ">=")
+            compare_fn = OPERATOR_FN.get(op, OPERATOR_FN[">="])
+            if compare_fn(warn_count, count):
                 action = threshold.get("action", setting.violation_action)
                 duration = threshold.get(
                     "mute_duration", setting.violation_mute_duration
