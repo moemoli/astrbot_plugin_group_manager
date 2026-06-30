@@ -14,6 +14,7 @@ from data.plugins.astrbot_plugin_group_manager.api.settings import (
     ACTION_MUTE,
     ACTION_RECALL_KICK,
     ACTION_RECALL_MUTE,
+    RECALL_TYPE_AT_ADMIN,
     RECALL_TYPE_CARDS,
     RECALL_TYPE_CHAT_HISTORY,
     RECALL_TYPE_FRIEND_RECOMMEND,
@@ -165,13 +166,23 @@ class GMPlugin(Star):
                     if seg.get("type") in ("json", "xml"):
                         return True
 
+            elif vtype == RECALL_TYPE_AT_ADMIN:
+                for seg in segments:
+                    if seg.get("type") == "at":
+                        at_id = str(seg.get("data", {}).get("qq", ""))
+                        if at_id and at_id != "all":
+                            admin_list = self.astr_config.get("admins_id", [])
+                            if at_id in admin_list:
+                                return True
+
         return False
 
     def _resolve_action_and_duration(self, warn_count: int, setting) -> tuple[str, int]:
         """Determine the punishment action and mute duration based on thresholds.
 
-        Checks warning thresholds in descending order of count. Falls back to
-        the base violation action when no threshold is matched.
+        Checks warning thresholds in descending order of count using strict
+        greater-than comparison. Falls back to the base violation action when
+        no threshold is matched.
 
         Args:
             warn_count: Current warning count for the user.
@@ -186,7 +197,7 @@ class GMPlugin(Star):
             reverse=True,
         )
         for threshold in sorted_thresholds:
-            if warn_count >= threshold.get("count", 0):
+            if warn_count > threshold.get("count", 0):
                 action = threshold.get("action", setting.violation_action)
                 duration = threshold.get(
                     "mute_duration", setting.violation_mute_duration
@@ -314,15 +325,25 @@ class GMPlugin(Star):
         if not setting.enable:
             return
 
-        # Blacklist check
-        if setting.blacklist_enabled:
-            if setting.blacklist_scope == "global":
-                blacklist = await self.api.load_global_blacklist()
-            else:
-                blacklist = await self.api.load_group_blacklist(str(group_id))
-            if str(user_id) in blacklist:
+        # Blacklist check - global and group checked independently
+        uid = str(user_id)
+        if setting.blacklist_global_enabled:
+            global_bl = await self.api.load_global_blacklist()
+            if uid in global_bl:
                 logger.info(
-                    f"Rejected user {user_id} joining group {group_id}: in blacklist"
+                    f"Rejected user {uid} joining group {group_id}: in global blacklist"
+                )
+                await event.bot.api.set_group_add_request(
+                    flag=str(flag), sub_type=str(sub_type), approve=False
+                )
+                event.stop_event()
+                return
+
+        if setting.blacklist_group_enabled:
+            group_bl = await self.api.load_group_blacklist(str(group_id))
+            if uid in group_bl:
+                logger.info(
+                    f"Rejected user {uid} joining group {group_id}: in group blacklist"
                 )
                 await event.bot.api.set_group_add_request(
                     flag=str(flag), sub_type=str(sub_type), approve=False
@@ -334,7 +355,7 @@ class GMPlugin(Star):
         comment = comment[
             comment.find("\u7b54\u6848\uff1a") + len("\u7b54\u6848\uff1a") :
         ]
-        info = await event.bot.get_stranger_info(user_id=int(str(user_id)))
+        info = await event.bot.get_stranger_info(user_id=int(uid))
         level = info.get("level", 0)
         if (setting.answer not in comment) or (level < setting.level):
             await event.bot.api.set_group_add_request(
@@ -347,7 +368,7 @@ class GMPlugin(Star):
         if setting.notify_enable:
             notify_content = setting.notify_content.replace(
                 "$user_name", str(raw.get("user_name") or "")
-            ).replace("$user_id", str(user_id))
+            ).replace("$user_id", uid)
             await event.bot.api.send_group_msg(
                 group_id=int(str(group_id)),
                 message=MessageSegment.text(notify_content),

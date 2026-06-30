@@ -18,6 +18,7 @@ const RECALL_TYPE_OPTIONS = [
   { value: 'group_recommend', label: '群推荐' },
   { value: 'friend_recommend', label: '好友推荐' },
   { value: 'cards', label: '卡片' },
+  { value: 'at_admin', label: '@管理' },
 ]
 
 const VIOLATION_ACTION_OPTIONS = [
@@ -58,7 +59,7 @@ const keywordInputRef = ref<any>(null)
 
 const defaultSettingsForm: SettingsLoadData = {
   enable: null, answer: null, level: null, notify_enable: null, notify_content: null,
-  blacklist_enabled: null, blacklist_scope: null,
+  blacklist_global_enabled: null, blacklist_group_enabled: null,
   violation_recall_enabled: null, violation_recall_types: null, violation_keywords: null,
   violation_action: null, violation_mute_duration: null, warning_thresholds: null,
 }
@@ -106,7 +107,7 @@ function normalizeSettingsData(data: Partial<SettingsLoadData> | null | undefine
   return {
     enable: data?.enable ?? null, answer: data?.answer ?? null, level: data?.level ?? null,
     notify_enable: data?.notify_enable ?? null, notify_content: data?.notify_content ?? null,
-    blacklist_enabled: data?.blacklist_enabled ?? null, blacklist_scope: data?.blacklist_scope ?? null,
+    blacklist_global_enabled: data?.blacklist_global_enabled ?? null, blacklist_group_enabled: data?.blacklist_group_enabled ?? null,
     violation_recall_enabled: data?.violation_recall_enabled ?? null,
     violation_recall_types: Array.isArray(data?.violation_recall_types) ? [...data!.violation_recall_types!] : null,
     violation_keywords: Array.isArray(data?.violation_keywords) ? [...data!.violation_keywords!] : null,
@@ -165,7 +166,7 @@ function removeKeyword(kw: string) { if (settingsForm.value.violation_keywords) 
 
 function addThreshold() {
   if (!settingsForm.value.warning_thresholds) settingsForm.value.warning_thresholds = []
-  settingsForm.value.warning_thresholds.push({ count: 3, action: 'mute', mute_duration: 60 })
+  settingsForm.value.warning_thresholds.push({ count: 3, operator: '>=', action: 'mute', mute_duration: 60 })
 }
 function removeThreshold(idx: number) { if (settingsForm.value.warning_thresholds) settingsForm.value.warning_thresholds.splice(idx, 1) }
 
@@ -192,8 +193,8 @@ function toSavePayload(id: string, s: Record<string, unknown>) {
     id, enable: Boolean(s.enable), answer: typeof s.answer === "string" ? s.answer : "",
     level: typeof s.level === "number" ? s.level : 0, notify_enable: Boolean(s.notify_enable),
     notify_content: typeof s.notify_content === "string" ? s.notify_content : "",
-    blacklist_enabled: Boolean(s.blacklist_enabled),
-    blacklist_scope: typeof s.blacklist_scope === "string" ? s.blacklist_scope : "group",
+    blacklist_global_enabled: Boolean(s.blacklist_global_enabled),
+    blacklist_group_enabled: Boolean(s.blacklist_group_enabled),
     violation_recall_enabled: Boolean(s.violation_recall_enabled),
     violation_recall_types: Array.isArray(s.violation_recall_types) ? s.violation_recall_types : [],
     violation_keywords: Array.isArray(s.violation_keywords) ? s.violation_keywords : [],
@@ -315,13 +316,8 @@ onBeforeUnmount(() => { if (closeOverlayTimer) { clearTimeout(closeOverlayTimer)
 
           <!-- Blacklist settings -->
           <h4 class="section-title">黑名单设置</h4>
-          <el-form-item label="启用黑名单"><el-switch v-model="settingsForm.blacklist_enabled" :active-value="true" :inactive-value="false" /></el-form-item>
-          <el-form-item v-if="settingsForm.blacklist_enabled" label="作用范围">
-            <el-radio-group v-model="settingsForm.blacklist_scope">
-              <el-radio value="global">全局（所有启用黑名单的群共享）</el-radio>
-              <el-radio value="group">分群（仅本群）</el-radio>
-            </el-radio-group>
-          </el-form-item>
+          <el-form-item label="启用全局黑名单"><el-switch v-model="settingsForm.blacklist_global_enabled" :active-value="true" :inactive-value="false" /></el-form-item>
+          <el-form-item label="启用分群黑名单"><el-switch v-model="settingsForm.blacklist_group_enabled" :active-value="true" :inactive-value="false" /></el-form-item>
 
           <el-divider />
 
@@ -358,10 +354,15 @@ onBeforeUnmount(() => { if (closeOverlayTimer) { clearTimeout(closeOverlayTimer)
 
             <!-- Warning thresholds -->
             <h4 class="section-title">警告阈值</h4>
-            <p class="section-desc">达到指定警告次数时执行对应处罚，按次数从高到低匹配第一个命中的规则。</p>
+            <p class="section-desc">按条件配置警告阈值，支持达到(>=)、大于(>)、小于(<)、小于等于(<=) 四种运算符，按次数从高到低匹配第一个命中的规则。</p>
 
             <div v-for="(threshold, idx) in settingsForm.warning_thresholds" :key="idx" class="threshold-row">
-              <span class="threshold-label">达到</span>
+              <el-select v-model="threshold.operator" size="small" class="threshold-operator">
+                <el-option value=">=" label="达到" />
+                <el-option value=">" label="大于" />
+                <el-option value="<" label="小于" />
+                <el-option value="<=" label="小于等于" />
+              </el-select>
               <el-input-number v-model="threshold.count" :min="1" :max="999" size="small" controls-position="right" class="threshold-count" />
               <span class="threshold-label">次时</span>
               <el-select v-model="threshold.action" size="small" class="threshold-action">
@@ -430,6 +431,7 @@ onBeforeUnmount(() => { if (closeOverlayTimer) { clearTimeout(closeOverlayTimer)
 .keyword-input { width: 120px; }
 .threshold-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding: 8px 10px; background: #f9fafb; border-radius: 8px; border: 1px solid #f0f0f0; }
 .threshold-label { font-size: 13px; color: #374151; white-space: nowrap; }
+.threshold-operator { width: 100px; }
 .threshold-count { width: 80px; }
 .threshold-action { width: 110px; }
 .threshold-duration { width: 80px; }

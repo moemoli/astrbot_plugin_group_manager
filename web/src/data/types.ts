@@ -17,8 +17,8 @@ export interface SettingsLoadData {
   level: number | null
   notify_enable: boolean | null
   notify_content: string | null
-  blacklist_enabled: boolean | null
-  blacklist_scope: string | null
+  blacklist_global_enabled: boolean | null
+  blacklist_group_enabled: boolean | null
   violation_recall_enabled: boolean | null
   violation_recall_types: string[] | null
   violation_keywords: string[] | null
@@ -34,8 +34,8 @@ export interface SettingsSavePayload {
   level: number
   notify_enable: boolean
   notify_content: string
-  blacklist_enabled: boolean
-  blacklist_scope: string
+  blacklist_global_enabled: boolean
+  blacklist_group_enabled: boolean
   violation_recall_enabled: boolean
   violation_recall_types: string[]
   violation_keywords: string[]

@@ -9,6 +9,7 @@ RECALL_TYPE_LINKS = "links"
 RECALL_TYPE_GROUP_RECOMMEND = "group_recommend"
 RECALL_TYPE_FRIEND_RECOMMEND = "friend_recommend"
 RECALL_TYPE_CARDS = "cards"
+RECALL_TYPE_AT_ADMIN = "at_admin"
 
 ALL_RECALL_TYPES = [
     RECALL_TYPE_KEYWORDS,
@@ -17,6 +18,7 @@ ALL_RECALL_TYPES = [
     RECALL_TYPE_GROUP_RECOMMEND,
     RECALL_TYPE_FRIEND_RECOMMEND,
     RECALL_TYPE_CARDS,
+    RECALL_TYPE_AT_ADMIN,
 ]
 
 ACTION_WARN = "warn"
@@ -56,8 +58,8 @@ class GroupSetting:
         level: int | None,
         notify_enable: bool | None,
         notify_content: str | None,
-        blacklist_enabled: bool | None = None,
-        blacklist_scope: str | None = None,
+        blacklist_global_enabled: bool | None = None,
+        blacklist_group_enabled: bool | None = None,
         violation_recall_enabled: bool | None = None,
         violation_recall_types: list[str] | None = None,
         violation_keywords: list[str] | None = None,
@@ -76,13 +78,13 @@ class GroupSetting:
         # Join notify content
         self.notify_content = notify_content if notify_content is not None else ""
 
-        # Blacklist enabled
-        self.blacklist_enabled = (
-            blacklist_enabled if blacklist_enabled is not None else False
+        # Global blacklist enabled
+        self.blacklist_global_enabled = (
+            blacklist_global_enabled if blacklist_global_enabled is not None else False
         )
-        # Blacklist scope: "global" or "group"
-        self.blacklist_scope = (
-            blacklist_scope if blacklist_scope is not None else "group"
+        # Per-group blacklist enabled
+        self.blacklist_group_enabled = (
+            blacklist_group_enabled if blacklist_group_enabled is not None else False
         )
         # Violation recall enabled
         self.violation_recall_enabled = (
@@ -137,15 +139,10 @@ class GroupManagerApi:
     async def get_setting(self):
         """Get group setting."""
         group_id = request.query.get("id", "", str)
-
         if len(group_id) < 1:
             return json_response({"code": -1})
-
         return json_response(
-            {
-                "c": 0,
-                "d": (await self.load_setting(group_id)).__dict__,
-            }
+            {"c": 0, "d": (await self.load_setting(group_id)).__dict__}
         )
 
     async def load_setting(self, group_id: str) -> GroupSetting:
@@ -159,11 +156,11 @@ class GroupManagerApi:
             f"{group_id}_notify_content",
             "Welcome $user_name($user_id) to this group!",
         )
-        blacklist_enabled = await self.plugin.get_kv_data(
-            f"{group_id}_blacklist_enabled", False
+        blacklist_global_enabled = await self.plugin.get_kv_data(
+            f"{group_id}_blacklist_global_enabled", False
         )
-        blacklist_scope = await self.plugin.get_kv_data(
-            f"{group_id}_blacklist_scope", "group"
+        blacklist_group_enabled = await self.plugin.get_kv_data(
+            f"{group_id}_blacklist_group_enabled", False
         )
         violation_recall_enabled = await self.plugin.get_kv_data(
             f"{group_id}_violation_recall_enabled", False
@@ -190,8 +187,8 @@ class GroupManagerApi:
             level,
             notify_enable,
             notify_content,
-            blacklist_enabled,
-            blacklist_scope,
+            blacklist_global_enabled,
+            blacklist_group_enabled,
             violation_recall_enabled,
             violation_recall_types,
             violation_keywords,
@@ -205,11 +202,9 @@ class GroupManagerApi:
         group_id = request.query.get("id", "", str)
         if group_id == "":
             return json_response({"c": -1, "d": {}})
-
         enable = await self.plugin.get_kv_data(f"{group_id}_enable", None)
         if enable is None:
             return json_response({"c": 2, "d": {}})
-
         return json_response({"c": 1, "d": {}})
 
     async def save_setting(self):
@@ -220,51 +215,50 @@ class GroupManagerApi:
         group_id = payload.get("id", -1)
         if group_id == -1:
             return json_response({"c": -1, "d": {}})
-        enable = payload.get("enable") or False
-        answer = payload.get("answer", "")
-        level = payload.get("level", -1)
-        notify_enable = payload.get("notify_enable", False)
-        notify_content = payload.get("notify_content", "")
-        blacklist_enabled = payload.get("blacklist_enabled", False)
-        blacklist_scope = payload.get("blacklist_scope", "group")
-        violation_recall_enabled = payload.get("violation_recall_enabled", False)
-        violation_recall_types = payload.get("violation_recall_types", [])
-        violation_keywords = payload.get("violation_keywords", [])
-        violation_action = payload.get("violation_action", ACTION_WARN)
-        violation_mute_duration = payload.get("violation_mute_duration", 60)
-        warning_thresholds = payload.get("warning_thresholds", [])
 
-        await self.plugin.put_kv_data(f"{group_id}_enable", enable)
-        await self.plugin.put_kv_data(f"{group_id}_answer", answer)
-        await self.plugin.put_kv_data(f"{group_id}_level", level)
-        await self.plugin.put_kv_data(f"{group_id}_notify_enable", notify_enable)
-        await self.plugin.put_kv_data(f"{group_id}_notify_content", notify_content)
         await self.plugin.put_kv_data(
-            f"{group_id}_blacklist_enabled", blacklist_enabled
+            f"{group_id}_enable", payload.get("enable") or False
         )
-        await self.plugin.put_kv_data(f"{group_id}_blacklist_scope", blacklist_scope)
+        await self.plugin.put_kv_data(f"{group_id}_answer", payload.get("answer", ""))
+        await self.plugin.put_kv_data(f"{group_id}_level", payload.get("level", -1))
         await self.plugin.put_kv_data(
-            f"{group_id}_violation_recall_enabled", violation_recall_enabled
+            f"{group_id}_notify_enable", payload.get("notify_enable", False)
         )
         await self.plugin.put_kv_data(
-            f"{group_id}_violation_recall_types", violation_recall_types
+            f"{group_id}_notify_content", payload.get("notify_content", "")
         )
         await self.plugin.put_kv_data(
-            f"{group_id}_violation_keywords", violation_keywords
-        )
-        await self.plugin.put_kv_data(f"{group_id}_violation_action", violation_action)
-        await self.plugin.put_kv_data(
-            f"{group_id}_violation_mute_duration", violation_mute_duration
+            f"{group_id}_blacklist_global_enabled",
+            payload.get("blacklist_global_enabled", False),
         )
         await self.plugin.put_kv_data(
-            f"{group_id}_warning_thresholds", warning_thresholds
+            f"{group_id}_blacklist_group_enabled",
+            payload.get("blacklist_group_enabled", False),
+        )
+        await self.plugin.put_kv_data(
+            f"{group_id}_violation_recall_enabled",
+            payload.get("violation_recall_enabled", False),
+        )
+        await self.plugin.put_kv_data(
+            f"{group_id}_violation_recall_types",
+            payload.get("violation_recall_types", []),
+        )
+        await self.plugin.put_kv_data(
+            f"{group_id}_violation_keywords", payload.get("violation_keywords", [])
+        )
+        await self.plugin.put_kv_data(
+            f"{group_id}_violation_action", payload.get("violation_action", ACTION_WARN)
+        )
+        await self.plugin.put_kv_data(
+            f"{group_id}_violation_mute_duration",
+            payload.get("violation_mute_duration", 60),
+        )
+        await self.plugin.put_kv_data(
+            f"{group_id}_warning_thresholds", payload.get("warning_thresholds", [])
         )
 
         return json_response(
-            {
-                "c": 0,
-                "d": (await self.load_setting(group_id)).__dict__,
-            }
+            {"c": 0, "d": (await self.load_setting(group_id)).__dict__}
         )
 
     # --- Blacklist API ---
@@ -297,8 +291,7 @@ class GroupManagerApi:
         payload = await request.json(default={})
         if payload is None:
             return json_response({"c": -1, "d": {}})
-        blacklist = payload.get("list", [])
-        await self.save_global_blacklist(blacklist)
+        await self.save_global_blacklist(payload.get("list", []))
         return json_response({"c": 0, "d": {}})
 
     async def get_group_blacklist(self):
@@ -317,11 +310,8 @@ class GroupManagerApi:
         group_id = payload.get("id", "")
         if group_id == "":
             return json_response({"c": -1, "d": {}})
-        blacklist = payload.get("list", [])
-        await self.save_group_blacklist(group_id, blacklist)
+        await self.save_group_blacklist(group_id, payload.get("list", []))
         return json_response({"c": 0, "d": {}})
-
-    # --- Platforms ---
 
     async def platforms(self):
         ctx = self.plugin.context
