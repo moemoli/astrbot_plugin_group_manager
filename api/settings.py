@@ -52,7 +52,14 @@ class GroupManagerApi:
             # 假设每个平台都有一个获取群组列表的方法
             platform_groups = await platform.bot.api.get_group_list()
             for group in platform_groups:
-                groups.append({"id": group["group_id"], "name": group["group_name"]})
+                groups.append(
+                    {
+                        "id": group["group_id"],
+                        "name": group["group_name"],
+                        "max": group.get("max_member_count", 0),
+                        "now": group.get("member_count", 0),
+                    }
+                )
         return json_response(groups)
 
     async def get_setting(self):
@@ -65,8 +72,8 @@ class GroupManagerApi:
 
         return json_response(
             {
-                "code": 0,
-                "data": (await self.load_setting(group_id)).__dict__,
+                "c": 0,
+                "d": (await self.load_setting(group_id)).__dict__,
             }
         )
 
@@ -92,22 +99,22 @@ class GroupManagerApi:
         """判断群组设置"""
         group_id = request.query.get("id", "", str)
         if group_id == "":
-            return json_response({"code": -1})
+            return json_response({"c": -1, "d": {}})
 
         enable = await self.plugin.get_kv_data(f"{group_id}_enable", None)
         if enable is None:
-            return json_response({"code": 2})
+            return json_response({"c": 2, "d": {}})
 
-        return json_response({"code": 1})
+        return json_response({"c": 1, "d": {}})
 
     async def save_setting(self):
         """修改群组设置"""
         payload = await request.json(default={})
         if payload is None:
-            return json_response({"code": -1})
+            return json_response({"c": -1, "d": {}})
         group_id = payload.get("id", -1)
         if group_id == -1:
-            return json_response({"code": -1})
+            return json_response({"c": -1, "d": {}})
         enable = payload.get("enable") or False
         answer = payload.get("answer", "")
         level = payload.get("level", -1)
@@ -122,8 +129,8 @@ class GroupManagerApi:
 
         return json_response(
             {
-                "code": 0,
-                "data": (await self.load_setting(group_id)).__dict__,
+                "c": 0,
+                "d": (await self.load_setting(group_id)).__dict__,
             }
         )
 

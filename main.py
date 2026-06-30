@@ -67,6 +67,17 @@ class GMPlugin(Star):
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
 
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    async def recall_aiocqhttp(self, event: AstrMessageEvent):
+
+        msg = event.message_str
+        if len(msg) < 1:
+            return
+        # 处理群消息并撤回
+
+        # 终止事件传播
+        event.stop_event()
+
     @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def handle_aiocqhttp(self, event: AiocqhttpMessageEvent):
